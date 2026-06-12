@@ -12,7 +12,12 @@ if _db_url.startswith("postgresql://") and "+asyncpg" not in _db_url:
 _is_pooler = "pooler.supabase.com" in _db_url or ":6543" in _db_url
 _is_supabase = "supabase.com" in _db_url
 
-_ssl_ctx = _ssl_module.create_default_context() if _is_supabase else None
+if _is_supabase:
+    _ssl_ctx = _ssl_module.create_default_context()
+    _ssl_ctx.check_hostname = False
+    _ssl_ctx.verify_mode = _ssl_module.CERT_NONE
+else:
+    _ssl_ctx = None
 
 connect_args: dict = {}
 if _is_pooler:
