@@ -60,6 +60,17 @@ if os.path.exists(LOCAL_UPLOAD_DIR):
     app.mount("/uploads", StaticFiles(directory=LOCAL_UPLOAD_DIR), name="uploads")
 
 
+@app.get("/debug-config")
+async def debug_config():
+    from urllib.parse import urlparse
+    url = settings.database_url
+    try:
+        parsed = urlparse(url)
+        return {"scheme": parsed.scheme, "host": parsed.hostname, "port": parsed.port}
+    except Exception as e:
+        return {"error": str(e), "raw_prefix": url[:30]}
+
+
 @app.get("/health")
 async def health():
     db_ok = False
