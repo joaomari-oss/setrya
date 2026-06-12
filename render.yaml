@@ -37,8 +37,7 @@ services:
   - type: web
     name: setrya-api
     runtime: docker
-    dockerfilePath: ./backend/Dockerfile
-    dockerContext: ./backend
+    dockerfilePath: ./railway.Dockerfile
     port: 8000
     healthCheckPath: /health
     envVars:
@@ -47,8 +46,7 @@ services:
   - type: worker
     name: setrya-worker
     runtime: docker
-    dockerfilePath: ./backend/Dockerfile
-    dockerContext: ./backend
+    dockerfilePath: ./railway.Dockerfile
     dockerCommand: celery -A app.celery_app.celery_app worker --loglevel=info --concurrency=2
     envVars:
       - fromGroup: setrya-env

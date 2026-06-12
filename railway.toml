@@ -1,6 +1,5 @@
 [build]
-dockerfilePath = "backend/Dockerfile"
-dockerContextPath = "backend"
+dockerfilePath = "railway.Dockerfile"
 
 [deploy]
 startCommand = "celery -A app.celery_app.celery_app worker --loglevel=info --concurrency=2"
