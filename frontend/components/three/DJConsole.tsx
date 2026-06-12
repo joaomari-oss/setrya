@@ -25,7 +25,6 @@ function Label({ text, position, rotation = [-Math.PI / 2, 0, 0], size = 0.06, c
       rotation={rotation}
       fontSize={size}
       color={color}
-      font="/fonts/Inter-Bold.woff" // Fallback to default if not found
       anchorX="center"
       anchorY="middle"
     >
