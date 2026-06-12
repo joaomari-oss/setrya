@@ -1,0 +1,63 @@
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from contextlib import asynccontextmanager
+from sqlalchemy import text
+import os
+import logging
+from app.config import settings
+from app.database import engine, Base
+from app.services import storage
+from app.routers import auth, tracks, playlists, sets, recommendations, preferences
+
+logging.basicConfig(level=logging.INFO)
+LOCAL_UPLOAD_DIR = "uploads"
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    os.makedirs(LOCAL_UPLOAD_DIR, exist_ok=True)
+    async with engine.begin() as conn:
+        # pgvector must exist before creating the embeddings table
+        await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+        await conn.run_sync(Base.metadata.create_all)
+    # Provision Supabase Storage buckets (no-op if already present or not configured)
+    storage.ensure_buckets()
+    yield
+    await engine.dispose()
+
+
+app = FastAPI(
+    title=settings.app_name,
+    version=settings.version,
+    description="AI-powered DJ assistant — audio analysis, smart recommendations, set generation",
+    lifespan=lifespan,
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origin_list,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.include_router(auth.router, prefix="/api/v1")
+app.include_router(tracks.router, prefix="/api/v1")
+app.include_router(playlists.router, prefix="/api/v1")
+app.include_router(sets.router, prefix="/api/v1")
+app.include_router(recommendations.router, prefix="/api/v1")
+app.include_router(preferences.router, prefix="/api/v1")
+
+# Serve locally-stored audio when Supabase Storage is not configured
+if os.path.exists(LOCAL_UPLOAD_DIR):
+    app.mount("/uploads", StaticFiles(directory=LOCAL_UPLOAD_DIR), name="uploads")
+
+
+@app.get("/health")
+async def health():
+    return {
+        "status": "ok",
+        "version": settings.version,
+        "storage": "supabase" if storage.storage_enabled() else "local",
+    }

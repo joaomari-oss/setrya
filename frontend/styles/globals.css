@@ -1,0 +1,84 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --font-inter: "Inter", system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", monospace;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-setrya-black text-setrya-white antialiased;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  ::selection {
+    @apply bg-setrya-accent text-setrya-black;
+  }
+
+  ::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-setrya-dark;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-setrya-muted rounded-full;
+  }
+}
+
+@layer components {
+  .glass {
+    @apply bg-white/[0.03] backdrop-blur-xl border border-white/[0.06];
+  }
+
+  .glass-hover {
+    @apply glass transition-all duration-300 hover:bg-white/[0.06] hover:border-white/[0.12];
+  }
+
+  .accent-glow {
+    box-shadow: 0 0 30px rgba(180, 244, 122, 0.15), 0 0 60px rgba(180, 244, 122, 0.05);
+  }
+
+  .text-gradient {
+    @apply bg-gradient-to-r from-setrya-white via-setrya-accent to-setrya-cyan bg-clip-text text-transparent;
+  }
+
+  .btn-primary {
+    @apply px-6 py-3 bg-setrya-accent text-setrya-black font-semibold rounded-xl
+           hover:bg-setrya-accent-dim active:scale-95 transition-all duration-200;
+  }
+
+  .btn-ghost {
+    @apply px-6 py-3 glass-hover text-setrya-white font-medium rounded-xl
+           active:scale-95 transition-all duration-200;
+  }
+
+  /* "group" can't be @apply'd (it's a variant marker) — add it in the JSX className */
+  .track-row {
+    @apply flex items-center gap-4 p-3 rounded-xl glass-hover cursor-pointer;
+  }
+
+  .camelot-badge {
+    @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-bold;
+  }
+
+  .energy-bar {
+    @apply h-1 rounded-full bg-setrya-muted overflow-hidden;
+  }
+
+  .energy-fill {
+    @apply h-full rounded-full bg-gradient-to-r from-setrya-accent to-setrya-cyan transition-all duration-500;
+  }
+}
