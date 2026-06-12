@@ -117,7 +117,7 @@ function Deck({ isPlaying, mirrored = false }: { isPlaying: boolean; mirrored?: 
       {Array.from({ length: 8 }).map((_, i) => {
         const col = i % 4;
         const row = Math.floor(i / 4);
-        const lit = isPlaying && (i === (state.clock?.elapsedTime ? Math.floor(state.clock.elapsedTime % 8) : 0));
+        const lit = isPlaying && i === Math.floor((Date.now() / 1000) % 8);
         return (
           <group key={i} position={[-0.7 + col * 0.46, 0.12, 1.25 + row * 0.48]}>
             <mesh>
