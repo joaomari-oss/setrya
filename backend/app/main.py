@@ -17,12 +17,16 @@ LOCAL_UPLOAD_DIR = "uploads"
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     os.makedirs(LOCAL_UPLOAD_DIR, exist_ok=True)
-    async with engine.begin() as conn:
-        try:
-            await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
-        except Exception:
-            pass  # Supabase manages this; pooler connections lack superuser
-        await conn.run_sync(Base.metadata.create_all)
+    try:
+        async with engine.begin() as conn:
+            try:
+                await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+            except Exception:
+                pass  # Supabase manages this; pooler connections lack superuser
+            await conn.run_sync(Base.metadata.create_all)
+        logging.info("Database tables OK")
+    except Exception as e:
+        logging.error(f"DB init failed — check DATABASE_URL env var: {e}")
     # Provision Supabase Storage buckets (no-op if already present or not configured)
     storage.ensure_buckets()
     yield
@@ -58,8 +62,16 @@ if os.path.exists(LOCAL_UPLOAD_DIR):
 
 @app.get("/health")
 async def health():
+    db_ok = False
+    try:
+        async with engine.begin() as conn:
+            await conn.execute(text("SELECT 1"))
+        db_ok = True
+    except Exception:
+        pass
     return {
-        "status": "ok",
+        "status": "ok" if db_ok else "degraded",
         "version": settings.version,
+        "db": "connected" if db_ok else "unreachable — set DATABASE_URL",
         "storage": "supabase" if storage.storage_enabled() else "local",
     }
