@@ -71,6 +71,16 @@ async def debug_config():
         return {"error": str(e), "raw_prefix": url[:30]}
 
 
+@app.get("/debug-db-error")
+async def debug_db_error():
+    try:
+        async with engine.begin() as conn:
+            await conn.execute(text("SELECT 1"))
+        return {"status": "connected"}
+    except Exception as e:
+        return {"error_type": type(e).__name__, "detail": str(e)[:500]}
+
+
 @app.get("/health")
 async def health():
     db_ok = False
