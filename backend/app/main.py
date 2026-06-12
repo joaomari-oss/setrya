@@ -18,8 +18,10 @@ LOCAL_UPLOAD_DIR = "uploads"
 async def lifespan(app: FastAPI):
     os.makedirs(LOCAL_UPLOAD_DIR, exist_ok=True)
     async with engine.begin() as conn:
-        # pgvector must exist before creating the embeddings table
-        await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+        try:
+            await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+        except Exception:
+            pass  # Supabase manages this; pooler connections lack superuser
         await conn.run_sync(Base.metadata.create_all)
     # Provision Supabase Storage buckets (no-op if already present or not configured)
     storage.ensure_buckets()

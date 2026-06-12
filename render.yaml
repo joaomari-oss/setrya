@@ -1,0 +1,54 @@
+envVarGroups:
+  - name: setrya-env
+    envVars:
+      # Supabase Postgres — Transaction pooler URI (port 6543)
+      - key: DATABASE_URL
+        sync: false
+      - key: DATABASE_URL_SYNC
+        sync: false
+      # Supabase API + Storage
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      # Redis — use Upstash: rediss://default:<pwd>@<host>.upstash.io:6379
+      - key: REDIS_URL
+        sync: false
+      - key: CELERY_BROKER_URL
+        sync: false
+      - key: CELERY_RESULT_BACKEND
+        sync: false
+      # Auth
+      - key: SECRET_KEY
+        generateValue: true
+      # CORS — comma-separated, no spaces
+      # e.g. https://setrya.vercel.app,https://setrya.com
+      - key: CORS_ORIGINS
+        sync: false
+      # Optional music APIs
+      - key: SPOTIFY_CLIENT_ID
+        sync: false
+      - key: SPOTIFY_CLIENT_SECRET
+        sync: false
+
+services:
+  - type: web
+    name: setrya-api
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    port: 8000
+    healthCheckPath: /health
+    envVars:
+      - fromGroup: setrya-env
+
+  - type: worker
+    name: setrya-worker
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    dockerCommand: celery -A app.celery_app.celery_app worker --loglevel=info --concurrency=2
+    envVars:
+      - fromGroup: setrya-env
