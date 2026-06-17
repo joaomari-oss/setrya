@@ -4,9 +4,9 @@ NOTE: SoundCloud closed public API registration; many apps use a client_id
 extracted from the web player. Provide one via SOUNDCLOUD_CLIENT_ID. We only
 read public metadata + stream URLs — no downloading of copyrighted audio.
 """
-import httpx
 from typing import Optional, List
 from app.config import settings
+from app.integrations.http import async_client
 import logging
 
 logger = logging.getLogger(__name__)
@@ -22,7 +22,7 @@ async def search_track(query: str, limit: int = 10) -> List[dict]:
     cid = await _client_id()
     if not cid:
         return []
-    async with httpx.AsyncClient(timeout=15) as client:
+    async with async_client(timeout=15) as client:
         resp = await client.get(
             f"{API_BASE}/search/tracks",
             params={"q": query, "limit": limit, "client_id": cid},
@@ -38,7 +38,7 @@ async def resolve_url(url: str) -> Optional[dict]:
     cid = await _client_id()
     if not cid:
         return None
-    async with httpx.AsyncClient(timeout=15) as client:
+    async with async_client(timeout=15) as client:
         resp = await client.get(f"{API_BASE}/resolve", params={"url": url, "client_id": cid})
         if resp.status_code == 200:
             return _normalize(resp.json())

@@ -1,4 +1,21 @@
-import axios from "axios";
+import axios, { AxiosError } from "axios";
+
+// Turn any thrown request error into a human-readable message.
+// Distinguishes: backend down / unreachable, 5xx server/DB errors, and
+// normal validation errors — so users see *why* it failed, not "failed".
+export function getErrorMessage(err: unknown, fallback = "Something went wrong"): string {
+  const ax = err as AxiosError<{ detail?: string }>;
+  if (ax?.response) {
+    const detail = ax.response.data?.detail;
+    if (detail) return detail;
+    if (ax.response.status >= 500)
+      return "Server error — the database may be unreachable. Try again shortly.";
+    return `Request failed (${ax.response.status})`;
+  }
+  // No response object => never reached the server (CORS, DNS, offline, proxy down)
+  if (ax?.request) return "Cannot reach the server. Check your connection or try again.";
+  return fallback;
+}
 
 // Use relative base URL so all API calls go through the Next.js server.
 // next.config.ts rewrites /api/* → backend (server-side proxy).
@@ -87,6 +104,15 @@ export const setsAPI = {
     seed_track_ids?: string[];
     name?: string;
   }) => api.post("/sets/generate", data),
+  // Build a set from the internet (Deezer + any configured sources)
+  generateOnline: (data: {
+    query: string;
+    track_count?: number;
+    energy_curve?: string;
+    sources?: string[];
+    name?: string;
+  }) => api.post("/sets/generate-online", data),
+  sources: () => api.get<{ available: string[] }>("/sets/sources"),
 };
 
 // Recommendations

@@ -1,6 +1,6 @@
-import httpx
 from typing import Optional, List
 from app.config import settings
+from app.integrations.http import async_client
 import logging
 
 logger = logging.getLogger(__name__)
@@ -12,7 +12,7 @@ API_BASE = "https://api.spotify.com/v1"
 async def get_client_token() -> Optional[str]:
     if not settings.spotify_client_id or not settings.spotify_client_secret:
         return None
-    async with httpx.AsyncClient() as client:
+    async with async_client() as client:
         resp = await client.post(
             TOKEN_URL,
             data={"grant_type": "client_credentials"},
@@ -27,7 +27,7 @@ async def search_track(query: str, limit: int = 10) -> List[dict]:
     token = await get_client_token()
     if not token:
         return []
-    async with httpx.AsyncClient() as client:
+    async with async_client() as client:
         resp = await client.get(
             f"{API_BASE}/search",
             params={"q": query, "type": "track", "limit": limit},
@@ -44,7 +44,7 @@ async def get_track_features(spotify_id: str) -> Optional[dict]:
     token = await get_client_token()
     if not token:
         return None
-    async with httpx.AsyncClient() as client:
+    async with async_client() as client:
         resp = await client.get(
             f"{API_BASE}/audio-features/{spotify_id}",
             headers={"Authorization": f"Bearer {token}"},

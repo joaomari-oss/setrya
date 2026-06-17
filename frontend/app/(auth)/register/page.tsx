@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { Disc3 } from "lucide-react";
-import { authAPI } from "@/lib/api";
+import { authAPI, getErrorMessage } from "@/lib/api";
 import { useAuthStore } from "@/lib/store";
 import toast from "react-hot-toast";
 
@@ -28,8 +28,7 @@ export default function RegisterPage() {
       toast.success("Welcome to Setrya!");
       router.push("/dashboard");
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail || "Registration failed";
-      toast.error(msg);
+      toast.error(getErrorMessage(err, "Registration failed"));
     } finally {
       setLoading(false);
     }

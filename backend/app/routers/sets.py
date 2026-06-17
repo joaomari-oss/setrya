@@ -6,13 +6,69 @@ from app.models.playlist import Playlist, PlaylistTrack
 from app.models.preferences import UserPreferences
 from app.routers.auth import get_current_user
 from app.models.user import User
-from app.schemas.playlist import SetGeneratorRequest, SetGeneratorResponse, PlaylistResponse
+from app.schemas.playlist import SetGeneratorRequest, SetGeneratorResponse, PlaylistResponse, OnlineSetRequest
 from app.services.set_generator import generate_set
+from app.services.online_set import build_online_set
+from app.services import online_search
 from app.services.learning_system import update_user_preferences
 from app.schemas.track import TrackResponse
 from app.schemas.playlist import PlaylistTrackItem
 
 router = APIRouter(prefix="/sets", tags=["sets"])
+
+
+async def _persist_set(db, current_user, tracks, name, default_name):
+    """Save an ordered track list as an auto-generated playlist."""
+    playlist = Playlist(user_id=current_user.id, name=name or default_name, is_auto_generated=True)
+    db.add(playlist)
+    await db.flush()
+    for i, track in enumerate(tracks):
+        db.add(PlaylistTrack(playlist_id=playlist.id, track_id=track.id, position=i))
+    await db.flush()
+    await db.refresh(playlist)
+    track_items = [PlaylistTrackItem(track=TrackResponse.model_validate(t), position=i) for i, t in enumerate(tracks)]
+    return PlaylistResponse(
+        id=playlist.id, name=playlist.name, description=None, cover_url=None,
+        is_auto_generated=True, track_count=len(tracks), created_at=playlist.created_at, tracks=track_items,
+    )
+
+
+@router.get("/sources")
+async def list_sources(current_user: User = Depends(get_current_user)):
+    """Which online music sources are currently available for set building."""
+    return {"available": online_search.available_sources()}
+
+
+@router.post("/generate-online", response_model=SetGeneratorResponse, status_code=201)
+async def generate_online_set(
+    request: OnlineSetRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Build a set from the internet — searches Deezer (+Spotify/SoundCloud when
+    configured), analyzes previews, and sequences a harmonically-mixed set."""
+    try:
+        result = await build_online_set(
+            db=db,
+            query=request.query,
+            track_count=request.track_count,
+            energy_curve_name=request.energy_curve,
+            sources=request.sources,
+        )
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+    tracks = result["tracks"]
+    playlist_resp = await _persist_set(
+        db, current_user, tracks, request.name, f"Online set — {request.query}"
+    )
+    return SetGeneratorResponse(
+        playlist=playlist_resp,
+        energy_curve=result["energy_curve"],
+        bpm_progression=result["bpm_progression"],
+        key_progression=result["key_progression"],
+        generation_notes=result["generation_notes"],
+    )
 
 
 @router.post("/generate", response_model=SetGeneratorResponse, status_code=201)

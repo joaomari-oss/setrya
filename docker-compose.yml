@@ -41,6 +41,20 @@ services:
       CELERY_BROKER_URL: redis://redis:6379/1
       CELERY_RESULT_BACKEND: redis://redis:6379/2
       CORS_ORIGINS: http://localhost:3000
+      # Local dev = self-contained: store audio on the shared `uploads` volume
+      # instead of Supabase Storage (which needs valid cloud creds + network).
+      SUPABASE_URL: ""
+      SUPABASE_SERVICE_KEY: ""
+      # Online set building runs librosa here too; pin native thread pools to 1 to
+      # avoid the fork+OpenMP SIGSEGV (signal 11) that crashes audio analysis.
+      OMP_NUM_THREADS: "1"
+      OPENBLAS_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+      NUMBA_NUM_THREADS: "1"
+      NUMBA_THREADING_LAYER: workqueue
+      NUMBA_CACHE_DIR: /tmp/numba
+      # Dev machine sits behind Avast TLS inspection → skip cert verify on music APIs.
+      EXTERNAL_SSL_VERIFY: "false"
     volumes:
       - uploads:/app/uploads
     depends_on:
@@ -61,6 +75,16 @@ services:
       REDIS_URL: redis://redis:6379/0
       CELERY_BROKER_URL: redis://redis:6379/1
       CELERY_RESULT_BACKEND: redis://redis:6379/2
+      SUPABASE_URL: ""
+      SUPABASE_SERVICE_KEY: ""
+      # Pin native thread pools to 1 — fixes the librosa/numba fork SIGSEGV (signal 11).
+      OMP_NUM_THREADS: "1"
+      OPENBLAS_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+      NUMBA_NUM_THREADS: "1"
+      NUMBA_THREADING_LAYER: workqueue
+      NUMBA_CACHE_DIR: /tmp/numba
+      EXTERNAL_SSL_VERIFY: "false"
     volumes:
       - uploads:/app/uploads
     depends_on:
@@ -75,9 +99,10 @@ services:
     build:
       context: ./frontend
       args:
-        # Baked at build time. NEXT_PUBLIC_* runs in the BROWSER, so it must be
-        # an address the user's machine can reach — not the Docker-internal hostname.
-        NEXT_PUBLIC_API_URL: http://localhost:8000
+        # api.ts uses a RELATIVE base ("/api/v1"); next.config.ts rewrites proxy
+        # those requests SERVER-SIDE from the Next node process, which runs inside
+        # this container — so it must use the Docker-internal hostname, not localhost.
+        NEXT_PUBLIC_API_URL: http://backend:8000
     ports:
       - "3000:3000"
     depends_on:

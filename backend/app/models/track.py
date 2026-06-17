@@ -12,6 +12,7 @@ class ExternalSource(str, enum.Enum):
     spotify = "spotify"
     soundcloud = "soundcloud"
     beatport = "beatport"
+    deezer = "deezer"
 
 
 class Track(Base):

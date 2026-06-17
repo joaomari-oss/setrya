@@ -46,6 +46,12 @@ class Settings(BaseSettings):
     spotify_client_secret: Optional[str] = None
     soundcloud_client_id: Optional[str] = None
     beatport_api_key: Optional[str] = None
+    # Deezer public API needs no key and returns real BPM + 30s preview — primary
+    # source for the "build a set from the internet" feature. Toggle off to disable.
+    deezer_enabled: bool = True
+    # Verify TLS certs on outbound calls to music APIs. Set False on dev machines
+    # behind a TLS-inspection proxy (e.g. Avast) that breaks cert chains.
+    external_ssl_verify: bool = True
 
     # ----- CORS -----
     # Comma-separated env var. Kept as str because pydantic-settings JSON-parses

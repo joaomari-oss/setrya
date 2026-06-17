@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { Disc3, Eye, EyeOff } from "lucide-react";
-import { authAPI } from "@/lib/api";
+import { authAPI, getErrorMessage } from "@/lib/api";
 import { useAuthStore } from "@/lib/store";
 import toast from "react-hot-toast";
 
@@ -24,8 +24,7 @@ export default function LoginPage() {
       setAuth(res.data.user, res.data.access_token);
       router.push("/dashboard");
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail || "Invalid credentials";
-      toast.error(msg);
+      toast.error(getErrorMessage(err, "Invalid credentials"));
     } finally {
       setLoading(false);
     }

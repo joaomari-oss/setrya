@@ -48,6 +48,14 @@ class SetGeneratorRequest(BaseModel):
     name: Optional[str] = None
 
 
+class OnlineSetRequest(BaseModel):
+    query: str                       # search seed, e.g. "melodic techno", an artist, a vibe
+    track_count: int = 10
+    energy_curve: str = "standard"   # standard | dark | euphoric | warm
+    sources: Optional[List[str]] = None  # subset of available; None = all available
+    name: Optional[str] = None
+
+
 class SetGeneratorResponse(BaseModel):
     playlist: PlaylistResponse
     energy_curve: List[float]

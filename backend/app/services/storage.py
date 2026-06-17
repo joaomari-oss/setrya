@@ -70,14 +70,20 @@ def upload_audio(local_path: str, key: str, content_type: str = "audio/mpeg") ->
     client = _get_client()
     if not client:
         return None
-    with open(local_path, "rb") as f:
-        client.storage.from_(settings.supabase_audio_bucket).upload(
-            key, f, {"content-type": content_type, "upsert": "true"}
+    try:
+        with open(local_path, "rb") as f:
+            client.storage.from_(settings.supabase_audio_bucket).upload(
+                key, f, {"content-type": content_type, "upsert": "true"}
+            )
+        signed = client.storage.from_(settings.supabase_audio_bucket).create_signed_url(
+            key, 60 * 60 * 24 * 365
         )
-    signed = client.storage.from_(settings.supabase_audio_bucket).create_signed_url(
-        key, 60 * 60 * 24 * 365
-    )
-    return signed.get("signedURL") or signed.get("signedUrl")
+        return signed.get("signedURL") or signed.get("signedUrl")
+    except Exception as e:
+        # Network/bucket/key failure — let the caller fall back to local disk
+        # instead of 500-ing the whole upload.
+        logger.warning(f"Supabase audio upload failed for {key}, falling back to local: {e}")
+        return None
 
 
 def download_audio(key: str) -> Optional[str]:
@@ -98,11 +104,15 @@ def upload_waveform(peaks: list[float], key: str) -> Optional[str]:
     client = _get_client()
     if not client:
         return None
-    payload = json.dumps({"peaks": peaks, "version": 1}).encode()
-    client.storage.from_(settings.supabase_waveform_bucket).upload(
-        key, payload, {"content-type": "application/json", "upsert": "true"}
-    )
-    return client.storage.from_(settings.supabase_waveform_bucket).get_public_url(key)
+    try:
+        payload = json.dumps({"peaks": peaks, "version": 1}).encode()
+        client.storage.from_(settings.supabase_waveform_bucket).upload(
+            key, payload, {"content-type": "application/json", "upsert": "true"}
+        )
+        return client.storage.from_(settings.supabase_waveform_bucket).get_public_url(key)
+    except Exception as e:
+        logger.warning(f"Supabase waveform upload failed for {key}: {e}")
+        return None
 
 
 def delete_audio(key: str) -> None:

@@ -1,5 +1,6 @@
 import os
 import uuid
+import shutil
 import tempfile
 import aiofiles
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Query
@@ -61,14 +62,18 @@ async def upload_track(
     file_path = None
 
     if storage.storage_enabled():
-        # Supabase Storage — upload then drop the temp file
+        # Supabase Storage — upload first; returns None on network/bucket failure
         audio_url = storage.upload_audio(tmp_path, storage_key, CONTENT_TYPES.get(ext, "audio/mpeg"))
+
+    if audio_url:
         os.remove(tmp_path)
     else:
-        # Local fallback — keep file on disk for the worker
+        # Local fallback — Supabase disabled OR upload failed: keep file on disk for the worker
         os.makedirs(LOCAL_UPLOAD_DIR, exist_ok=True)
         file_path = os.path.join(LOCAL_UPLOAD_DIR, f"{track_id}{ext}")
-        os.replace(tmp_path, file_path)
+        # shutil.move (not os.replace) — the temp file and uploads/ are on
+        # different mounts (Docker volume), so a rename would fail cross-device.
+        shutil.move(tmp_path, file_path)
         storage_key = None
         audio_url = f"/uploads/{track_id}{ext}"
 
